@@ -1,0 +1,208 @@
+﻿@{
+    ViewData["Title"] = "Upload Insurance Claim";
+}
+
+<style>
+    .container {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    h2 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .upload-box {
+        border: 2px dashed #ccc;
+        padding: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin: 20px 0;
+    }
+
+        .upload-box:hover {
+            border-color: #007bff;
+            background: #f9f9f9;
+        }
+
+    #fileInput {
+        display: none;
+    }
+
+    #fileName {
+        margin-top: 10px;
+        color: #28a745;
+        font-size: 14px;
+    }
+
+    button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+    }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+    #loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 999;
+    }
+
+    .loader-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        text-align: center;
+        min-width: 250px;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    .error {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 15px;
+    }
+</style>
+
+
+<style>
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<div class="container">
+    <h2>Upload Insurance Claim</h2>
+
+    <form id="uploadForm" asp-action="Upload" asp-controller="Claim" method="post" enctype="multipart/form-data">
+        <div class="upload-box" id="dropZone">
+            📁 Click or Drag PDF here
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max 10MB</div>
+            <div id="fileName"></div>
+            <input type="file" name="file" id="fileInput" accept=".pdf" required />
+        </div>
+
+        <button type="submit" id="submitBtn">Upload & Extract</button>
+    </form>
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="error">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <p>⚠️ @error.ErrorMessage</p>
+            }
+        </div>
+    }
+</div>
+
+<div id="loader">
+    <div class="loader-content">
+        <div class="spinner"></div>
+        <div id="loaderText">Processing...</div>
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const uploadForm = document.getElementById('uploadForm');
+    const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loaderText');
+    const submitBtn = document.getElementById('submitBtn');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024) {
+            fileName.textContent = '✅ ' + file.name;
+            fileName.style.color = '#28a745';
+        } else if (file) {
+            fileName.textContent = '❌ Invalid file (PDF only, max 10MB)';
+            fileName.style.color = '#dc3545';
+            fileInput.value = '';
+        }
+    });
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#007bff';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = '#ccc';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ccc';
+        const file = e.dataTransfer.files[0];
+        if (file && file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024) {
+            fileInput.files = e.dataTransfer.files;
+            fileName.textContent = '✅ ' + file.name;
+            fileName.style.color = '#28a745';
+        } else if (file) {
+            fileName.textContent = '❌ Invalid file';
+            fileName.style.color = '#dc3545';
+        }
+    });
+
+    uploadForm.addEventListener('submit', () => {
+        if (!fileInput.files[0]) {
+            alert('Please select a file');
+            return;
+        }
+
+        loader.style.display = 'flex';
+        submitBtn.disabled = true;
+
+        const messages = ['Uploading...', 'Extracting text...', 'Analyzing with AI...', 'Processing...'];
+        let index = 0;
+        const interval = setInterval(() => {
+            if (index < messages.length) {
+                loaderText.textContent = messages[index];
+                index++;
+            }
+        }, 1500);
+    });
+</script>

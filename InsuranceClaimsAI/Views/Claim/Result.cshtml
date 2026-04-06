@@ -1,0 +1,374 @@
+﻿@model ClaimResult
+@{
+    ViewData["Title"] = "Extracted Claim Data";
+}
+
+<style>
+    .nav-tabs .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 12px 24px;
+        transition: all 0.3s;
+    }
+
+        .nav-tabs .nav-link:hover {
+            color: #007bff;
+            border: none;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #007bff;
+            background: none;
+            border-bottom: 3px solid #007bff;
+        }
+
+    .route-badge {
+        font-size: 24px;
+        font-weight: bold;
+        padding: 15px;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.2s;
+    }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+    .info-label {
+        font-size: 12px;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 500;
+        color: #2c3e50;
+        word-break: break-word;
+    }
+
+    .missing-badge {
+        background: #fff3cd;
+        color: #856404;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        display: inline-block;
+        margin: 3px;
+    }
+
+    .json-container {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 20px;
+        border-radius: 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        max-height: 500px;
+        overflow: auto;
+    }
+</style>
+
+<div class="container-fluid px-0">
+    <h2 class="mb-4">📋 Insurance Claim Extraction Results</h2>
+
+    <!-- Routing Decision Banner -->
+    <div class="alert @(Model.recommendedRoute == "Fast Track" ? "alert-success" :
+                      Model.recommendedRoute == "Manual Review" ? "alert-warning" :
+                      Model.recommendedRoute == "Investigation Flag" ? "alert-danger" :
+                      Model.recommendedRoute == "Specialist Queue" ? "alert-info" : "alert-secondary") mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Routing Decision:</strong>
+                <h3 class="mb-0">@Model.recommendedRoute</h3>
+                <small>@Model.reasoning</small>
+            </div>
+            <div class="text-end">
+                @if (Model.missingFields != null && Model.missingFields.Any())
+                {
+                    <span class="badge bg-warning text-dark">⚠️ @Model.missingFields.Count Missing Fields</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" id="resultTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="extracted-tab" data-bs-toggle="tab" data-bs-target="#extracted" type="button" role="tab">
+                📊 Extracted Data
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="json-tab" data-bs-toggle="tab" data-bs-target="#json" type="button" role="tab">
+                🔧 JSON Output
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary" type="button" role="tab">
+                📈 Summary Report
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Extracted Data Tab -->
+        <div class="tab-pane fade show active" id="extracted" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="info-label">🏢 POLICY INFORMATION</div>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Policy Number</div>
+                                <div class="info-value">@(Model.extractedFields?.PolicyNumber ?? "—")</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Policyholder Name</div>
+                                <div class="info-value">@(Model.extractedFields?.PolicyholderName ?? "—")</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-label">Effective Date</div>
+                                <div class="info-value">@(Model.extractedFields?.EffectiveDate ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">🚗 ASSET DETAILS</div>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Asset Type</div>
+                                <div class="info-value">@(Model.extractedFields?.AssetType ?? "—")</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Asset ID / VIN</div>
+                                <div class="info-value">@(Model.extractedFields?.AssetId ?? "—")</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-label">Estimated Damage</div>
+                                <div class="info-value">@(Model.extractedFields?.EstimatedDamage > 0 ? $"${Model.extractedFields.EstimatedDamage:N0}" : "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">👥 INVOLVED PARTIES</div>
+                        <div class="row">
+                            <div class="col-12 mb-2">
+                                <div class="info-label">Claimant</div>
+                                <div class="info-value">@(Model.extractedFields?.Claimant ?? "—")</div>
+                            </div>
+                            <div class="col-12 mb-2">
+                                <div class="info-label">Third Parties</div>
+                                <div class="info-value">@(Model.extractedFields?.ThirdParties ?? "—")</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-label">Contact Details</div>
+                                <div class="info-value">@(Model.extractedFields?.ContactDetails ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="info-card">
+                        <div class="info-label">📅 INCIDENT INFORMATION</div>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Date</div>
+                                <div class="info-value">@(Model.extractedFields?.IncidentDate ?? "—")</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Time</div>
+                                <div class="info-value">@(Model.extractedFields?.IncidentTime ?? "—")</div>
+                            </div>
+                            <div class="col-12 mb-2">
+                                <div class="info-label">Location</div>
+                                <div class="info-value">@(Model.extractedFields?.IncidentLocation ?? "—")</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-label">Description</div>
+                                <div class="info-value">@(Model.extractedFields?.IncidentDescription ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-card">
+                        <div class="info-label">📎 OTHER INFORMATION</div>
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Claim Type</div>
+                                <div class="info-value">@(Model.extractedFields?.ClaimType ?? "—")</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="info-label">Initial Estimate</div>
+                                <div class="info-value">@(Model.extractedFields?.InitialEstimate ?? "—")</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="info-label">Attachments</div>
+                                <div class="info-value">@(Model.extractedFields?.Attachments ?? "—")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.missingFields != null && Model.missingFields.Any())
+                    {
+                        <div class="info-card">
+                            <div class="info-label">⚠️ MISSING FIELDS</div>
+                            <div>
+                                @foreach (var field in Model.missingFields)
+                                {
+                                    <span class="missing-badge">@field</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON Tab -->
+        <div class="tab-pane fade" id="json" role="tabpanel">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>JSON Output</strong>
+                    <button class="btn btn-sm btn-primary" onclick="copyJSON()">📋 Copy JSON</button>
+                </div>
+                <div class="json-container" id="jsonOutput">
+                    @{
+                        var jsonOutput = new
+                        {
+                            extractedFields = Model.extractedFields,
+                            missingFields = Model.missingFields,
+                            recommendedRoute = Model.recommendedRoute,
+                            reasoning = Model.reasoning
+                        };
+                        var jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(jsonOutput, Newtonsoft.Json.Formatting.Indented);
+                    }
+                    @jsonString
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Report Tab -->
+        <div class="tab-pane fade" id="summary" role="tabpanel">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="info-card text-center">
+                        <div class="display-4">📄</div>
+                        <div class="info-label">Completeness Score</div>
+                        <div class="info-value">
+                            @{
+                                var totalFields = 16;
+                                var filledFields = Model.missingFields != null ? totalFields - Model.missingFields.Count : totalFields;
+                                var percentage = (filledFields * 100 / totalFields);
+                            }
+                            <h2 class="text-primary">@percentage%</h2>
+                            <small class="text-muted">@filledFields of @totalFields fields filled</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="info-card text-center">
+                        <div class="display-4">🎯</div>
+                        <div class="info-label">Routing Priority</div>
+                        <div class="info-value">
+                            <h4 class="@(Model.recommendedRoute == "Fast Track" ? "text-success" :
+                                       Model.recommendedRoute == "Specialist Queue" ? "text-info" :
+                                       Model.recommendedRoute == "Investigation Flag" ? "text-danger" : "text-warning")">
+                                @Model.recommendedRoute
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="info-card text-center">
+                        <div class="display-4">💰</div>
+                        <div class="info-label">Damage Estimate</div>
+                        <div class="info-value">
+                            <h2 class="text-success">@(Model.extractedFields?.EstimatedDamage > 0 ? $"${Model.extractedFields.EstimatedDamage:N0}" : "Not provided")</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <div class="info-label">📋 EXTRACTION SUMMARY</div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>✓ Successfully Extracted:</strong>
+                        <ul class="mt-2">
+                            @{
+                                var successFields = new List<string>();
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.PolicyNumber)) successFields.Add("Policy Number");
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.PolicyholderName)) successFields.Add("Policyholder Name");
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.IncidentDate)) successFields.Add("Incident Date");
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.IncidentLocation)) successFields.Add("Incident Location");
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.Claimant)) successFields.Add("Claimant");
+                                if (!string.IsNullOrEmpty(Model.extractedFields?.AssetType)) successFields.Add("Asset Type");
+                                if (Model.extractedFields?.EstimatedDamage > 0) successFields.Add("Damage Estimate");
+                            }
+                            @if (successFields.Any())
+                            {
+                                foreach (var field in successFields)
+                                {
+                                    <li>@field</li>
+                                }
+                            }
+                            else
+                            {
+                                <li class="text-muted">No fields extracted</li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>⚠️ Missing/Incomplete:</strong>
+                        <ul class="mt-2">
+                            @if (Model.missingFields != null && Model.missingFields.Any())
+                            {
+                                foreach (var field in Model.missingFields)
+                                {
+                                    <li class="text-warning">@field</li>
+                                }
+                            }
+                            else
+                            {
+                                <li class="text-success">✓ All fields complete!</li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <a asp-action="Index" class="btn btn-primary">📤 Upload Another Claim</a>
+        <button onclick="window.print()" class="btn btn-secondary">🖨️ Print Results</button>
+    </div>
+</div>
+
+<script>
+    function copyJSON() {
+        const jsonText = document.getElementById('jsonOutput').innerText;
+        navigator.clipboard.writeText(jsonText).then(() => {
+            alert('✅ JSON copied to clipboard!');
+        });
+    }
+</script>
