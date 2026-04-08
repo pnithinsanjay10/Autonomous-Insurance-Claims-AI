@@ -145,13 +145,13 @@ The system reads uploaded files, extracts data using iText 7 (for PDFs) or direc
 
 ---
 
-🔄 Workflow
+## 🔄 Workflow
 
-Upload PDF
+Upload **PDF / TXT file**
 
 ↓
 
-Extract Data (iText 7)
+Extract Data (iText 7 for PDFs / direct parsing for TXT)
 
 ↓
 
