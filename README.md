@@ -1,35 +1,36 @@
 # Autonomous-Insurance-Claims-AI
 🚀 **Insurance Claims AI**
 
-📌 **Overview**
+## 📌 Overview
 
-Insurance Claims AI is a web-based application built using ASP.NET Core Web App (MVC) that automates the extraction and processing of insurance claim data from PDF documents.
+Insurance Claims AI is a web-based application built using ASP.NET Core Web App (MVC) that automates the extraction and processing of insurance claim data from **PDF and TXT documents**.
 
-The system reads PDF files, extracts data using iText 7, and uses Gemini AI to convert it into structured JSON with intelligent routing decisions.
+The system reads uploaded files, extracts data using iText 7 (for PDFs) or direct text parsing (for TXT files), and uses Gemini AI to convert it into structured JSON with intelligent routing decisions.
+
 
 ---
 
-**🎯 Features**
+## 🎯 Features
 
-- Upload insurance claim PDFs
+* 📄 Upload insurance claim files (**PDF & TXT supported**)
 
-- Extract data from fillable PDFs (AcroForms)
+* 🔍 Extract data from fillable PDFs (AcroForms)
 
-- Fallback text extraction for normal PDFs
+* 📝 Support for plain text (.txt) documents
 
-- AI-based structured data extraction
+* 🔄 Fallback text extraction for non-fillable PDFs
 
-- Smart claim routing:
+* 🤖 AI-based structured data extraction
 
-    **Fast-track**
+* ⚡ Smart claim routing:
 
-    **Manual review**
+  * Fast-track
+  * Manual review
+  * Investigation
+  * Specialist queue
 
-    **Investigation**
+* 🖥️ Clean and simple UI
 
-    **Specialist queue**
-
-- Clean and simple UI
 
    ---
 🛠️**Tech Stack**
@@ -45,6 +46,105 @@ The system reads PDF files, extracts data using iText 7, and uses Gemini AI to c
 - Newtonsoft.Json
 
 ---
+
+## 📸 Application UI
+
+### 🏠 Home Page
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/HomePage.png" width="700"/>
+</p>
+
+---
+
+### ⚡ Fast Track Flow
+
+#### 1️⃣ Overall View
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/FastTrack1.png" width="700"/>
+</p>
+
+#### 2️⃣ JSON Structure
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/FastTrack2.png" width="700"/>
+</p>
+
+#### 3️⃣ Summary Result
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/FastTrack3.png" width="700"/>
+</p>
+
+---
+
+### ⚠️ Manual Review Flow
+
+#### 1️⃣ Overall View
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Manual1.png" width="700"/>
+</p>
+
+#### 2️⃣ JSON Structure
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Manual2.png" width="700"/>
+</p>
+
+#### 3️⃣ Summary Result
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Manual3.png" width="700"/>
+</p>
+
+---
+
+### 🚨 Fraud Detection Flow
+
+#### 1️⃣ Overall View
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Fraud1.png" width="700"/>
+</p>
+
+#### 2️⃣ JSON Structure
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Fraud2.png" width="700"/>
+</p>
+
+#### 3️⃣ Summary Result
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Fraud3.png" width="700"/>
+</p>
+
+---
+
+### 🏥 Injury / Specialist Flow
+
+#### 1️⃣ Overall View
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/injury 1.png" width="700"/>
+</p>
+
+#### 2️⃣ JSON Structure
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/injury2.png" width="700"/>
+</p>
+
+#### 3️⃣ Summary Result
+
+<p align="center">
+  <img src="InsuranceClaimsAI/Screenshots/Injury3.png" width="700"/>
+</p>
+
+---
+
 🔄 Workflow
 
 Upload PDF
@@ -178,8 +278,9 @@ https://localhost:xxxx/Claim
 
 ## ⚠️ Notes
 
-* Works best with **fillable PDFs**
+* Works best with **fillable PDFs (AcroForms)**
 * Supports normal PDFs via text extraction
+* Supports **TXT files** for direct text processing
 
 ---
 
