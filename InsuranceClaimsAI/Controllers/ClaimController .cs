@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
-
 public class ClaimController : Controller
 {
     private readonly PdfService _pdfService;
@@ -30,6 +29,10 @@ public class ClaimController : Controller
     [HttpPost]
     public async Task<IActionResult> Upload(IFormFile file)
     {
+        // Clear any previous errors
+        ViewBag.Error = null;
+        ModelState.Clear();
+
         if (file == null || file.Length == 0)
         {
             ModelState.AddModelError("file", "Please select a file");
@@ -37,9 +40,11 @@ public class ClaimController : Controller
         }
 
         var fileExtension = Path.GetExtension(file.FileName).ToLower();
-        if (fileExtension != ".pdf")
+
+        // Allow both PDF and TXT files
+        if (fileExtension != ".pdf" && fileExtension != ".txt")
         {
-            ModelState.AddModelError("file", "Only PDF files are allowed");
+            ModelState.AddModelError("file", "Only PDF and TXT files are allowed");
             return View("Index");
         }
 
@@ -58,28 +63,61 @@ public class ClaimController : Controller
 
         try
         {
-            // Save and extract PDF
+            // Save file
             using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 await file.CopyToAsync(stream);
             }
 
-            var text = _pdfService.ExtractText(path);
+            _logger.LogInformation($"File saved: {path}");
+
+            // Extract text based on file type
+            string text;
+            if (fileExtension == ".pdf")
+            {
+                text = _pdfService.ExtractText(path);
+                _logger.LogInformation($"Extracted {text?.Length ?? 0} characters from PDF");
+
+                // Debug: Save extracted text to see what's being extracted
+                var debugPath = Path.Combine(uploadsFolder, $"debug_{uniqueFileName}.txt");
+                await System.IO.File.WriteAllTextAsync(debugPath, text);
+                _logger.LogInformation($"Debug text saved to: {debugPath}");
+            }
+            else
+            {
+                text = System.IO.File.ReadAllText(path);
+                _logger.LogInformation($"Read {text.Length} characters from TXT file");
+            }
 
             if (string.IsNullOrWhiteSpace(text))
             {
-                throw new Exception("No text could be extracted from the PDF");
+                throw new Exception("No text could be extracted from the file. The PDF might be scanned or empty.");
             }
 
-            _logger.LogInformation($"Extracted {text.Length} characters from PDF");
+            // Show first 500 characters for debugging
+            var preview = text.Length > 500 ? text.Substring(0, 500) : text;
+            _logger.LogInformation($"Text preview: {preview}");
 
             // Extract data using AI
             var aiJson = await _aiService.ExtractAsync(text);
+            _logger.LogInformation($"AI Response: {aiJson}");
+
+            if (string.IsNullOrWhiteSpace(aiJson))
+            {
+                throw new Exception("AI returned empty response");
+            }
+
             var result = JsonConvert.DeserializeObject<ClaimResult>(aiJson);
 
-            if (result?.extractedFields == null)
+            if (result == null)
             {
-                throw new Exception("Failed to deserialize AI response");
+                throw new Exception("Failed to deserialize AI response - result is null");
+            }
+
+            if (result.extractedFields == null)
+            {
+                result.extractedFields = new ExtractedFields();
+                _logger.LogWarning("extractedFields was null, created new instance");
             }
 
             // Apply routing rules
@@ -89,36 +127,71 @@ public class ClaimController : Controller
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing claim");
-            ViewBag.Error = ex.Message;
+            _logger.LogError(ex, "Error processing claim"); 
+
+
+            // Check for 503 error and show friendly message
+            if (ex.Message.Contains("503") || ex.Message.Contains("high demand"))
+            {
+                ViewBag.Error = "The AI service is currently experiencing high demand. Please try again in a few minutes.";
+                ViewBag.ErrorDetails = "The Gemini API is temporarily unavailable. This is a temporary issue from Google's side.";
+            }
+            else if (ex.Message.Contains("429"))
+            {
+                ViewBag.Error = "API rate limit exceeded. Please wait a moment before trying again.";
+                ViewBag.ErrorDetails = "You've reached the free tier limit. Try again in a few minutes.";
+            }
+            else
+            {
+                ViewBag.Error = ex.Message;
+                ViewBag.ErrorDetails = ex.InnerException?.Message;
+            }
+
             return View("Index");
         }
         finally
         {
+            // Clean up temp file
             if (System.IO.File.Exists(path))
             {
-                try { System.IO.File.Delete(path); }
-                catch (Exception ex) { _logger.LogWarning(ex, "Failed to delete temp file"); }
+                try
+                {
+                    System.IO.File.Delete(path);
+                    _logger.LogInformation($"Deleted temp file: {path}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to delete temp file");
+                }
             }
         }
     }
+
     private void ApplyRoutingRules(ClaimResult result)
     {
         result.missingFields = new List<string>();
         var fields = result.extractedFields;
 
+        if (fields == null)
+        {
+            result.recommendedRoute = "Manual Review";
+            result.reasoning = "No fields were extracted from the document";
+            result.missingFields.Add("All fields");
+            return;
+        }
+
         // Define mandatory fields
-        var mandatoryFields = new Dictionary<string, string>
-    {
-        { "PolicyNumber", fields.PolicyNumber },
-        { "PolicyholderName", fields.PolicyholderName },
-        { "EffectiveDate", fields.EffectiveDate },
-        { "IncidentDate", fields.IncidentDate },
-        { "IncidentDescription", fields.IncidentDescription },
-        { "Claimant", fields.Claimant },
-        { "AssetType", fields.AssetType },
-        { "ClaimType", fields.ClaimType }
-    };
+        var mandatoryFields = new Dictionary<string, string?>
+        {
+            { "PolicyNumber", fields.PolicyNumber },
+            { "PolicyholderName", fields.PolicyholderName },
+            { "EffectiveDate", fields.EffectiveDate },
+            { "IncidentDate", fields.IncidentDate },
+            { "IncidentDescription", fields.IncidentDescription },
+            { "Claimant", fields.Claimant },
+            { "AssetType", fields.AssetType },
+            { "ClaimType", fields.ClaimType }
+        };
 
         // Check for missing mandatory fields
         foreach (var field in mandatoryFields)
@@ -177,10 +250,10 @@ public class ClaimController : Controller
 
         // Check Description
         var injuryKeywords = new[] {
-        "injury", "injuries", "injured", "medical", "hospital", "ambulance",
-        "whiplash", "back pain", "headache", "fracture", "bleeding",
-        "pain", "doctor", "treatment", "surgery", "hurt"
-    };
+            "injury", "injuries", "injured", "medical", "hospital", "ambulance",
+            "whiplash", "back pain", "headache", "fracture", "bleeding",
+            "pain", "doctor", "treatment", "surgery", "hurt"
+        };
 
         if (!string.IsNullOrEmpty(fields.IncidentDescription))
         {
