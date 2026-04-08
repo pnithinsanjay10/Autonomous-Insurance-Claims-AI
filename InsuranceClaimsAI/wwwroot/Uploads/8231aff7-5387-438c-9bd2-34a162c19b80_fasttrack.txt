@@ -1,0 +1,29 @@
+INSURANCE CLAIM REPORT
+
+POLICY INFORMATION
+Policy Number: POL-2024-12345
+Policyholder Name: John Robert Smith
+Effective Date: 2024-01-01
+
+INCIDENT INFORMATION
+Date of Incident: 2024-03-15
+Time of Incident: 14:30 (2:30 PM)
+Location of Incident: 123 Main Street, Anytown, CA 90210
+Description: Vehicle slid on wet road and hit a curb. Front bumper damaged, alignment issues. No other vehicles involved. Driver was alone.
+
+INVOLVED PARTIES
+Claimant: John Robert Smith
+Third Parties: None
+Contact Details: Phone: (555) 123-4567, Email: john.smith@email.com
+
+ASSET DETAILS
+Asset Type: 2022 Toyota Camry
+Asset ID (VIN): 4T1B11HK2NU123456
+Estimated Damage: $8,500
+
+OTHER MANDATORY FIELDS
+Claim Type: Collision
+Attachments: Police report #22345, photos.zip
+Initial Estimate: $8,500.00
+
+Additional Notes: Vehicle is driveable. Claimant has full coverage insurance.

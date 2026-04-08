@@ -41,6 +41,12 @@
         font-size: 14px;
     }
 
+    .file-types {
+        font-size: 11px;
+        color: #666;
+        margin-top: 8px;
+    }
+
     button {
         background: #007bff;
         color: white;
@@ -54,6 +60,11 @@
 
         button:hover {
             background: #0056b3;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
     #loader {
@@ -87,15 +98,47 @@
         margin: 0 auto 15px;
     }
 
-    .error {
+    /* Error message styling */
+    .error-message {
         background: #f8d7da;
         color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+        text-align: left;
+        border-left: 4px solid #dc3545;
+        word-wrap: break-word;
+    }
+
+        .error-message h4 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .error-message p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+    .error-details {
+        font-family: monospace;
+        font-size: 12px;
+        background: rgba(0,0,0,0.05);
         padding: 10px;
-        border-radius: 5px;
+        border-radius: 4px;
+        margin-top: 10px;
+        overflow-x: auto;
+    }
+
+    .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 12px;
+        border-radius: 8px;
         margin-top: 15px;
+        border-left: 4px solid #28a745;
     }
 </style>
-
 
 <style>
     @@keyframes spin {
@@ -110,30 +153,56 @@
 </style>
 
 <div class="container">
-    <h2>Upload Insurance Claim</h2>
+    <h2>📄 Upload Insurance Claim</h2>
 
     <form id="uploadForm" asp-action="Upload" asp-controller="Claim" method="post" enctype="multipart/form-data">
         <div class="upload-box" id="dropZone">
-            📁 Click or Drag PDF here
-            <div style="font-size: 12px; color: #666; margin-top: 5px;">Max 10MB</div>
+            📁 Click or Drag file here
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">Supported: PDF, TXT (Max 10MB)</div>
             <div id="fileName"></div>
-            <input type="file" name="file" id="fileInput" accept=".pdf" required />
+            <input type="file" name="file" id="fileInput" accept=".pdf,.txt" required />
         </div>
 
-        <button type="submit" id="submitBtn">Upload & Extract</button>
+        <button type="submit" id="submitBtn">🚀 Upload & Extract</button>
     </form>
 
-    @if (!ViewData.ModelState.IsValid)
+    <!-- Display ModelState Errors -->
+    @if (ViewData.ModelState != null && !ViewData.ModelState.IsValid)
     {
-        <div class="error">
+        <div class="error-message">
+            <h4>⚠️ Validation Errors:</h4>
             @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
             {
-                <p>⚠️ @error.ErrorMessage</p>
+                <p>• @error.ErrorMessage</p>
             }
+        </div>
+    }
+
+    <!-- Display General Error from ViewBag -->
+    @if (ViewBag.Error != null)
+    {
+        <div class="error-message">
+            <h4>❌ Error Processing Claim:</h4>
+            <p>@ViewBag.Error</p>
+            @if (ViewBag.ErrorDetails != null)
+            {
+                <div class="error-details">
+                    <strong>Details:</strong> @ViewBag.ErrorDetails
+                </div>
+            }
+        </div>
+    }
+
+    <!-- Display success message (for debugging) -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="success-message">
+            ✅ @TempData["Success"]
         </div>
     }
 </div>
 
+<!-- Loader -->
 <div id="loader">
     <div class="loader-content">
         <div class="spinner"></div>
@@ -150,15 +219,17 @@
     const loaderText = document.getElementById('loaderText');
     const submitBtn = document.getElementById('submitBtn');
 
+    const allowedTypes = ['application/pdf', 'text/plain'];
+
     dropZone.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
-        if (file && file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024) {
+        if (file && allowedTypes.includes(file.type) && file.size <= 10 * 1024 * 1024) {
             fileName.textContent = '✅ ' + file.name;
             fileName.style.color = '#28a745';
         } else if (file) {
-            fileName.textContent = '❌ Invalid file (PDF only, max 10MB)';
+            fileName.textContent = '❌ Invalid file (PDF or TXT only, max 10MB)';
             fileName.style.color = '#dc3545';
             fileInput.value = '';
         }
@@ -177,12 +248,12 @@
         e.preventDefault();
         dropZone.style.borderColor = '#ccc';
         const file = e.dataTransfer.files[0];
-        if (file && file.type === 'application/pdf' && file.size <= 10 * 1024 * 1024) {
+        if (file && allowedTypes.includes(file.type) && file.size <= 10 * 1024 * 1024) {
             fileInput.files = e.dataTransfer.files;
             fileName.textContent = '✅ ' + file.name;
             fileName.style.color = '#28a745';
         } else if (file) {
-            fileName.textContent = '❌ Invalid file';
+            fileName.textContent = '❌ Invalid file (PDF or TXT only)';
             fileName.style.color = '#dc3545';
         }
     });
